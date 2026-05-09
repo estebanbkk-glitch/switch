@@ -6,7 +6,8 @@
       "Bash(powershell.exe *)",
       "PowerShell(Rename-Item *)",
       "Bash(gh auth *)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "PowerShell(Copy-Item *)"
     ]
   }
 }
