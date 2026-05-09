@@ -25,24 +25,49 @@ All files live in `C:\Users\USER\.claude\`
 | `deepseek-on.bat` | Starts proxy, sets env var — double-click to activate |
 | `deepseek-off.bat` | Kills proxy, clears env var — double-click to deactivate |
 | `deepseek-proxy.js` | The Node.js proxy server (no npm dependencies) |
+| `deepseek-tray.ps1` | System tray GUI with ON/OFF buttons, API key field, and usage stats |
+| `launch-tray.vbs` | Silent launcher for the tray GUI |
 | `start-proxy.vbs` | Launches the proxy as a hidden background process |
+| `deepseek-stats.json` | Token usage data (auto-created, tracked across sessions) |
 | `proxy.log` | Request log — created at runtime, shows all API calls |
 
 ---
 
 ## Usage
 
-### Switching to DeepSeek
+### Recommended: System Tray GUI
+1. Double-click `launch-tray.vbs` (or the desktop shortcut)
+2. Enter your DeepSeek API key in the GUI
+3. Click **Use DeepSeek** to activate
+4. Open a new terminal and run `claude` as normal
+5. Click **Use Claude** to switch back
+
+The tray icon shows the current state at a glance (orange = Claude, blue = DeepSeek).
+
+### Legacy: Command-line toggles
+**Switching to DeepSeek:**
 1. Double-click `deepseek-on.bat`
-2. Open a new PowerShell window — it will turn **dark gray** with a `*** DEEPSEEK MODE ACTIVE ***` banner
+2. Open a new PowerShell window — dark gray with `*** DEEPSEEK MODE ACTIVE ***`
 3. Run `claude` as normal
 
-### Switching back to Claude (Anthropic)
+**Switching back to Claude:**
 1. Double-click `deepseek-off.bat`
-2. Open a new PowerShell window — it returns to normal colors
+2. Open a new PowerShell window — normal colors
 3. Run `claude` as normal
 
 > **Note:** The currently open Claude Code session is unaffected. Changes only apply to new sessions opened after running the bat.
+
+---
+
+## Usage Tracking
+
+The proxy tracks DeepSeek token usage automatically. With the tray GUI open, you'll see real-time stats:
+
+```
+DeepSeek: 142.3K in / 28.7K out  (47 requests)
+```
+
+The data persists in `deepseek-stats.json` across sessions. Reset from the tray menu (**Reset Stats**).
 
 ---
 

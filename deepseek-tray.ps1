@@ -9,6 +9,7 @@ $scriptDir = "$env:USERPROFILE\.claude"
 $proxyJs   = "$scriptDir\deepseek-proxy.js"
 $keyFile   = "$scriptDir\deepseek-key.txt"
 $configFile = "$scriptDir\deepseek-config.json"
+$statsUrl  = "http://localhost:4000/v1/stats"
 $port      = 4000
 $script:proxyPidVal = $null
 
@@ -127,6 +128,7 @@ function Start-Proxy {
         $form.BackColor = [System.Drawing.Color]::FromArgb(230, 245, 255)
         $panel.BackColor = [System.Drawing.Color]::FromArgb(230, 245, 255)
         Update-ProxyStatus
+        Update-Stats
     } else {
         $statusLabel.Text = "Failed to start proxy!"
         $statusLabel.ForeColor = "Red"
@@ -151,6 +153,7 @@ function Stop-Proxy {
     $form.BackColor = [System.Drawing.Color]::FromArgb(255, 242, 230)
     $panel.BackColor = [System.Drawing.Color]::FromArgb(255, 242, 230)
     Update-ProxyStatus
+    Update-Stats
 }
 
 # -- build form --
@@ -242,12 +245,34 @@ $offBtn.FlatAppearance.BorderSize = 0
 $offBtn.Add_Click({ Stop-Proxy })
 $panel.Controls.Add($offBtn)
 
+# usage stats label
+$usageLabel = New-Object System.Windows.Forms.Label
+$usageLabel.Text = ""
+$usageLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$usageLabel.ForeColor = "Gray"
+$usageLabel.Size = New-Object System.Drawing.Size(340, 30)
+$usageLabel.Location = New-Object System.Drawing.Point(0, 133)
+$usageLabel.TextAlign = "MiddleCenter"
+$panel.Controls.Add($usageLabel)
+
+function Update-Stats {
+    try {
+        $resp = Invoke-RestMethod -Uri $statsUrl -Method GET -TimeoutSec 2 -ErrorAction Stop
+        $inTok  = [math]::Round($resp.deepseek.input / 1000, 1)
+        $outTok = [math]::Round($resp.deepseek.output / 1000, 1)
+        $reqs   = $resp.deepseek.requests
+        $usageLabel.Text = "DeepSeek: $inTok`K in / $outTok`K out  ($reqs requests)"
+    } catch {
+        $usageLabel.Text = ""
+    }
+}
+
 # status
 $statusLabel = New-Object System.Windows.Forms.Label
 $statusLabel.Text = "Checking status..."
 $statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
 $statusLabel.Size = New-Object System.Drawing.Size(340, 22)
-$statusLabel.Location = New-Object System.Drawing.Point(0, 136)
+$statusLabel.Location = New-Object System.Drawing.Point(0, 163)
 $statusLabel.TextAlign = "MiddleCenter"
 $panel.Controls.Add($statusLabel)
 
@@ -257,7 +282,7 @@ $info1.Text = "Proxy runs on localhost:$port"
 $info1.Font = New-Object System.Drawing.Font("Segoe UI", 8)
 $info1.ForeColor = "Gray"
 $info1.Size = New-Object System.Drawing.Size(340, 16)
-$info1.Location = New-Object System.Drawing.Point(0, 163)
+$info1.Location = New-Object System.Drawing.Point(0, 190)
 $info1.TextAlign = "MiddleCenter"
 $panel.Controls.Add($info1)
 
@@ -267,7 +292,7 @@ $info2.Text = "New terminals get ANTHROPIC_BASE_URL"
 $info2.Font = New-Object System.Drawing.Font("Segoe UI", 8)
 $info2.ForeColor = "Gray"
 $info2.Size = New-Object System.Drawing.Size(340, 16)
-$info2.Location = New-Object System.Drawing.Point(0, 179)
+$info2.Location = New-Object System.Drawing.Point(0, 206)
 $info2.TextAlign = "MiddleCenter"
 $panel.Controls.Add($info2)
 
@@ -296,6 +321,16 @@ $trayOffItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $trayOffItem.Text = "Use &Claude"
 $trayOffItem.Add_Click({ Stop-Proxy })
 $trayMenu.Items.Add($trayOffItem)
+
+$trayMenu.Items.Add("-")
+
+$resetItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$resetItem.Text = "&Reset Stats"
+$resetItem.Add_Click({
+    try { Invoke-RestMethod -Uri "http://localhost:4000/v1/stats/reset" -Method GET -TimeoutSec 2 -ErrorAction Stop | Out-Null } catch {}
+    Update-Stats
+})
+$trayMenu.Items.Add($resetItem)
 
 $trayMenu.Items.Add("-")
 
@@ -340,6 +375,7 @@ if ($running) {
     $offBtn.Enabled = $false
 }
 Update-ProxyStatus
+Update-Stats
 
 # -- run --
 $form.Add_Shown({ $form.Activate() })

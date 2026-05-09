@@ -7,7 +7,10 @@
       "PowerShell(Rename-Item *)",
       "Bash(gh auth *)",
       "Bash(git init *)",
-      "PowerShell(Copy-Item *)"
+      "PowerShell(Copy-Item *)",
+      "PowerShell(gh repo *)",
+      "Bash(gh repo *)",
+      "WebFetch(domain:console.anthropic.com)"
     ]
   }
 }

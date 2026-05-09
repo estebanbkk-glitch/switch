@@ -3,10 +3,23 @@
 
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = 4000;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const DEEPSEEK_MODEL = 'deepseek-chat';
+const STATS_FILE = path.join(__dirname, 'deepseek-stats.json');
+
+// -- token usage tracking --
+function loadStats() {
+  try { return JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); }
+  catch { return { deepseek: { input: 0, output: 0, requests: 0 } }; }
+}
+function saveStats(stats) { fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2)); }
+function trackDeepSeek(inTokens, outTokens) {
+  const s = loadStats(); s.deepseek.input += inTokens || 0; s.deepseek.output += outTokens || 0; s.deepseek.requests++; saveStats(s);
+}
 
 function convertMessages(msgs, system) {
   const out = [];
@@ -72,11 +85,11 @@ function convertResponse(r, model) {
   return { id: r.id || `msg_${Date.now()}`, type: 'message', role: 'assistant', content, model: model || DEEPSEEK_MODEL, stop_reason, usage: { input_tokens: r.usage?.prompt_tokens || 0, output_tokens: r.usage?.completion_tokens || 0 } };
 }
 
-function handleStreaming(res, upstream, model) {
+function handleStreaming(res, upstream, model, onDone) {
   const msgId = `msg_${Date.now()}`;
   res.write(`event: message_start\ndata: ${JSON.stringify({ type: 'message_start', message: { id: msgId, type: 'message', role: 'assistant', content: [], model, stop_reason: null, usage: { input_tokens: 0, output_tokens: 0 } } })}\n\n`);
 
-  let textStarted = false, toolBlocks = {}, buf = '';
+  let textStarted = false, toolBlocks = {}, buf = '', finalOut = 0;
 
   upstream.on('data', chunk => {
     buf += chunk.toString();
@@ -107,13 +120,17 @@ function handleStreaming(res, upstream, model) {
         if (textStarted) res.write(`event: content_block_stop\ndata: ${JSON.stringify({ type: 'content_block_stop', index: 0 })}\n\n`);
         for (const i of Object.keys(toolBlocks)) res.write(`event: content_block_stop\ndata: ${JSON.stringify({ type: 'content_block_stop', index: (textStarted ? 1 : 0) + parseInt(i) })}\n\n`);
         const stop_reason = choice.finish_reason === 'tool_calls' ? 'tool_use' : choice.finish_reason === 'length' ? 'max_tokens' : 'end_turn';
-        res.write(`event: message_delta\ndata: ${JSON.stringify({ type: 'message_delta', delta: { stop_reason }, usage: { output_tokens: p.usage?.completion_tokens || 0 } })}\n\n`);
+        finalOut = p.usage?.completion_tokens || 0;
+        res.write(`event: message_delta\ndata: ${JSON.stringify({ type: 'message_delta', delta: { stop_reason }, usage: { output_tokens: finalOut } })}\n\n`);
       }
     }
   });
 
-  upstream.on('end', () => { if (!res.writableEnded) { res.write(`event: message_stop\ndata: ${JSON.stringify({ type: 'message_stop' })}\n\n`); res.end(); } });
-  upstream.on('error', () => { if (!res.writableEnded) res.end(); });
+  upstream.on('end', () => {
+    if (!res.writableEnded) { res.write(`event: message_stop\ndata: ${JSON.stringify({ type: 'message_stop' })}\n\n`); res.end(); }
+    if (onDone) onDone(0, finalOut);
+  });
+  upstream.on('error', () => { if (!res.writableEnded) res.end(); if (onDone) onDone(0, 0); });
 }
 
 const FAKE_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'];
@@ -132,6 +149,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && req.url === '/v1/stats') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(loadStats()));
+    return;
+  }
+  if (req.method === 'GET' && req.url === '/v1/stats/reset') {
+    const empty = { deepseek: { input: 0, output: 0, requests: 0 } };
+    saveStats(empty); res.writeHead(200); res.end(JSON.stringify(empty));
+    return;
+  }
   if (req.method === 'HEAD') { res.writeHead(200); res.end(); return; }
   if (req.method !== 'POST' || !req.url.startsWith('/v1/messages')) { res.writeHead(404); res.end(); return; }
 
@@ -150,12 +177,20 @@ const server = http.createServer((req, res) => {
     const upReq = https.request({ hostname: 'api.deepseek.com', path: '/chat/completions', method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Content-Length': Buffer.byteLength(reqBody) } }, upRes => {
       if (oReq.stream) {
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
-        handleStreaming(res, upRes, ar.model);
+        // wrap handleStreaming to track final usage
+        const origEnd = res.end.bind(res);
+        let finalIn = 0, finalOut = 0;
+        res.end = function(...args) {
+          trackDeepSeek(finalIn, finalOut);
+          return origEnd(...args);
+        };
+        handleStreaming(res, upRes, ar.model, (inTok, outTok) => { finalIn = inTok; finalOut = outTok; });
       } else {
         let rb = ''; upRes.on('data', c => rb += c); upRes.on('end', () => {
           try {
             const or = JSON.parse(rb);
             if (or.error) { res.writeHead(upRes.statusCode || 500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ type: 'error', error: { type: 'api_error', message: or.error.message } })); return; }
+            trackDeepSeek(or.usage?.prompt_tokens || 0, or.usage?.completion_tokens || 0);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(convertResponse(or, ar.model)));
           } catch (e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }

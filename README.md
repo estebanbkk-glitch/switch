@@ -22,6 +22,7 @@ The proxy handles full translation: messages, tool use (Read/Write/Bash/etc.), s
 | `start-proxy.vbs` | Launches the proxy as a hidden background process |
 | `deepseek-on.bat` | Starts proxy + sets env var (original method) |
 | `deepseek-off.bat` | Kills proxy + clears env var (original method) |
+| `deepseek-stats.json` | Token usage data (auto-created at runtime) |
 | `DeepSeek-Switcher.md` | Full documentation |
 
 ## Quick Start (Recommended)
@@ -31,6 +32,16 @@ The proxy handles full translation: messages, tool use (Read/Write/Bash/etc.), s
 3. Click **Use DeepSeek** — the tray icon turns blue
 4. Open a new terminal and run `claude` as normal
 5. Click **Use Claude** to switch back
+
+## Usage Tracking
+
+The proxy automatically tracks DeepSeek token usage across sessions. The tray GUI displays real-time stats:
+
+```
+DeepSeek: 142.3K in / 28.7K out  (47 requests)
+```
+
+Reset the counter anytime from the tray menu (**Reset Stats**). Data persists in `deepseek-stats.json`.
 
 ## Visual Indicator
 
