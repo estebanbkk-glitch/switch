@@ -159,7 +159,7 @@ function Stop-Proxy {
 # -- build form --
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "DeepSeek Switcher"
-$form.Size = New-Object System.Drawing.Size(380, 340)
+$form.Size = New-Object System.Drawing.Size(380, 380)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox = $false
@@ -188,7 +188,7 @@ $form.Controls.Add($subtitle)
 
 # panel to hold the rest
 $panel = New-Object System.Windows.Forms.Panel
-$panel.Size = New-Object System.Drawing.Size(350, 210)
+$panel.Size = New-Object System.Drawing.Size(350, 240)
 $panel.Location = New-Object System.Drawing.Point(15, 60)
 $panel.BackColor = [System.Drawing.Color]::FromArgb(255, 242, 230)
 $form.Controls.Add($panel)
