@@ -20,7 +20,8 @@ for /f "tokens=5" %%p in ('netstat -aon 2^>nul ^| findstr ":4000 "') do (
 
 :: Start the Node.js proxy completely hidden (no window)
 echo  Starting DeepSeek proxy...
-wscript "%USERPROFILE%\.claude\start-proxy.vbs" "%DEEPSEEK_API_KEY%" "%USERPROFILE%\.claude\deepseek-proxy.js"
+set PROXY_DIR=%~dp0
+wscript "%PROXY_DIR%start-proxy.vbs" "%DEEPSEEK_API_KEY%" "%PROXY_DIR%deepseek-proxy.js"
 
 :: Brief wait for the server to boot
 timeout /t 2 /nobreak >nul
