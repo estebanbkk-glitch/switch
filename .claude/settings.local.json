@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "PowerShell($desktop = [Environment]::GetFolderPath\\(\"Desktop\"\\); Write-Output $desktop; $wshell = New-Object -ComObject WScript.Shell; $shortcut = $wshell.CreateShortcut\\(\"$desktop\\\\DeepSeek Switcher.lnk\"\\); $shortcut.TargetPath = \"wscript.exe\"; $shortcut.Arguments = \"\"\"$env:USERPROFILE\\\\.claude\\\\launch-tray.vbs\"\"\"; $shortcut.Description = \"Toggle Claude Code between Anthropic and DeepSeek\"; $shortcut.WorkingDirectory = \"$env:USERPROFILE\\\\.claude\"; $shortcut.Save\\(\\); Write-Output \"Shortcut created at: $desktop\\\\DeepSeek Switcher.lnk\")",
+      "Bash(powershell.exe *)",
+      "PowerShell(Rename-Item *)",
+      "Bash(gh auth *)",
+      "Bash(git init *)"
+    ]
+  }
+}
