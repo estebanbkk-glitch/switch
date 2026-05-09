@@ -8,9 +8,23 @@ echo   Switching Claude Code to DeepSeek...
 echo  ==========================================
 echo.
 
-:: ---- PUT YOUR DEEPSEEK API KEY HERE ----
-set DEEPSEEK_API_KEY=
-:: ----------------------------------------
+:: Read API key saved by the GUI (deepseek-tray.ps1)
+set KEY_FILE=%~dp0deepseek-key.txt
+if not exist "%KEY_FILE%" (
+    echo  No API key found.
+    echo  Open the DeepSeek Switcher GUI and enter your key there first.
+    echo.
+    pause
+    exit /b 1
+)
+set /p DEEPSEEK_API_KEY=<"%KEY_FILE%"
+if "%DEEPSEEK_API_KEY%"=="" (
+    echo  API key file is empty.
+    echo  Open the DeepSeek Switcher GUI and enter your key there first.
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Kill any process already on port 4000
 echo  Clearing port 4000...

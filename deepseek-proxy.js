@@ -135,8 +135,7 @@ function handleStreaming(res, upstream, model, onDone) {
 
 const FAKE_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'];
 
-const fs = require('fs');
-const logFile = require('path').join(__dirname, 'proxy.log');
+const logFile = path.join(__dirname, 'proxy.log');
 function log(msg) { const line = `${new Date().toISOString()} ${msg}\n`; process.stdout.write(line); fs.appendFileSync(logFile, line); }
 
 const server = http.createServer((req, res) => {

@@ -5,7 +5,7 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$scriptDir = "$env:USERPROFILE\.claude"
+$scriptDir = $PSScriptRoot
 $proxyJs   = "$scriptDir\deepseek-proxy.js"
 $keyFile   = "$scriptDir\deepseek-key.txt"
 $configFile = "$scriptDir\deepseek-config.json"
